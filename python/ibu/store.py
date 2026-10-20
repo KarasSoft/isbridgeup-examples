@@ -1,5 +1,5 @@
 """Durable state in one SQLite file: the state per bridge, the event ids
-already handled, and the webhook inbox.
+already handled, the webhook inbox, and when the Live API last answered.
 
 The inbox is what makes it safe to answer a delivery quickly: the receiver
 writes the verified event here, answers 2xx, and the worker applies it
@@ -22,6 +22,11 @@ CREATE TABLE IF NOT EXISTS bridge_state (
 CREATE TABLE IF NOT EXISTS seen_event (
     event_id   TEXT PRIMARY KEY,
     handled_at REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS sync_link (
+    id           INTEGER PRIMARY KEY CHECK (id = 1),
+    last_sync_ms INTEGER,
+    access_lost  TEXT
 );
 CREATE TABLE IF NOT EXISTS inbox (
     seq         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,6 +55,17 @@ class Store:
                 states.bridges[bridge_id] = {"state": state, "revision": revision, "hold": bool(hold)}
             states.seen.update(self._db.execute("SELECT event_id, handled_at FROM seen_event").fetchall())
 
+    def load_link(self) -> tuple[int | None, str | None]:
+        """(last_sync_ms, access_lost) as saved before a restart: an old cache
+        is shown as unknown until a read succeeds again."""
+        with self._lock:
+            row = self._db.execute("SELECT last_sync_ms, access_lost FROM sync_link WHERE id = 1").fetchone()
+        return (row[0], row[1]) if row else (None, None)
+
+    def save_link(self, last_sync_ms: int | None, access_lost: str | None) -> None:
+        with self._lock:
+            self._db.execute("INSERT OR REPLACE INTO sync_link VALUES (1, ?, ?)", (last_sync_ms, access_lost))
+
     def enqueue(self, event_id: str, body: str) -> bool:
         """Persist a verified delivery. False when that event is already queued."""
         with self._lock:
@@ -75,7 +91,8 @@ class Store:
         with self._lock:
             self._db.execute("BEGIN")
             try:
-                self._db.executemany("INSERT OR REPLACE INTO bridge_state VALUES (?, ?, ?, ?)", rows)
+                self._db.execute("DELETE FROM bridge_state")  # a bridge a snapshot dropped goes too
+                self._db.executemany("INSERT INTO bridge_state VALUES (?, ?, ?, ?)", rows)
                 if event_id is not None and event_id in states.seen:
                     self._db.execute("INSERT OR IGNORE INTO seen_event VALUES (?, ?)", (event_id, states.seen[event_id]))
                 if done_seq is not None:

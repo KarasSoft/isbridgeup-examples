@@ -12,6 +12,7 @@ import { test } from 'node:test'
 import { explain, keyProblem, refresh, replay } from '../bridge-sync.mjs'
 import { sign } from '../send-event.mjs'
 import { ApiError } from '../src/client.mjs'
+import { revisionOf } from '../src/state.mjs'
 import { Store } from '../src/store.mjs'
 import { Sync } from '../src/sync.mjs'
 import { ROUTES, SCENARIOS, SECRET, fixture } from './helpers.mjs'
@@ -40,7 +41,7 @@ test('replay runs every scenario', () => {
   for (const path of SCENARIOS) {
     const [code, out] = quietly(() => replay(path))
     assert.equal(code, 0)
-    assert.match(out, /== snapshot live\.json/)
+    assert.match(out, /== snapshot live[\w-]*\.json/)
   }
 })
 
@@ -59,6 +60,50 @@ test('refresh backs off', async () => {
     console.log = original
   }
   assert.equal(sync.states.bridges.size, 3)
+})
+
+// Regression audit R1: a refused key turns every route CHECK at once;
+// timeouts, 5xx and 429 do once nothing has answered for maxOfflineS; the next
+// successful read brings the board back.
+test('losing the api never leaves a stale clear', async () => {
+  const snap = fixture('live-after-recovery.json') // every route CLEAR
+  const readAt = revisionOf(snap.server_time)
+  const allClear = { 'Brickell loop': 'CLEAR', 'Fremont crossing': 'CLEAR' }
+  const allCheck = { 'Brickell loop': 'CHECK', 'Fremont crossing': 'CHECK' }
+  const client = (outcome) => ({ live: async () => { if (outcome instanceof Error) throw outcome; return outcome } })
+  const original = console.log
+  console.log = () => {}
+  try {
+    for (const failure of [new ApiError(401, 'invalid_api_key', ''), new ApiError(403, 'subscription_ended', ''), new ApiError(403, 'scope_required', '')]) {
+      const sync = new Sync(ROUTES, new Store(':memory:'), { maxOfflineS: 90 })
+      sync.applySnapshot(snap, { setClock: false })
+      assert.equal(await refresh(sync, client(failure)), 300_000)
+      assert.deepEqual(sync.routeStatuses(readAt + 1000), allCheck, failure.message) // at once
+      assert.match(sync.board(readAt + 1000), /refused the key/)
+      sync.applySnapshot(snap, { setClock: false }) // access is back
+      assert.deepEqual(sync.routeStatuses(readAt + 1000), allClear)
+    }
+    for (const failure of [new TypeError('fetch failed'), new DOMException('timed out', 'TimeoutError'), new ApiError(503, null, ''), new ApiError(429, 'rate_limited', '', 30)]) {
+      const sync = new Sync(ROUTES, new Store(':memory:'), { maxOfflineS: 90 })
+      sync.applySnapshot(snap, { setClock: false })
+      for (let i = 0; i < 3; i++) await refresh(sync, client(failure)) // a series of failed reads
+      assert.deepEqual(sync.routeStatuses(readAt + 90_000), allClear, failure.message) // not for long yet
+      assert.deepEqual(sync.routeStatuses(readAt + 90_001), allCheck, failure.message) // too long: CHECK
+      assert.match(sync.board(readAt + 90_001), /no answer from IsBridgeUp for 1 min/)
+      assert.equal(await refresh(sync, client(fixture('live-later.json'))), null)
+      assert.deepEqual(sync.routeStatuses(revisionOf(fixture('live-later.json').server_time)), allClear)
+    }
+  } finally {
+    console.log = original
+  }
+})
+
+test('the board reprints when the link is lost', () => {
+  const sync = new Sync(ROUTES, new Store(':memory:'), { maxOfflineS: 90 })
+  const snap = fixture('live-after-recovery.json')
+  sync.applySnapshot(snap, { setClock: false })
+  const readAt = revisionOf(snap.server_time)
+  assert.notEqual(sync.fingerprint(readAt), sync.fingerprint(readAt + 91_000))
 })
 
 test('api errors are explained', () => {

@@ -29,11 +29,16 @@ export class BridgeStates {
   // GET /v1/bridges/live: at start-up, when applyEvent asks for it, and about
   // every ttl_seconds as a safety net.
   applySnapshot(snapshot) {
+    const listed = new Set()
     for (const b of snapshot.bridges) {
+      listed.add(b.id)
       const revision = revisionOf(b.state_changed_at)
       if (b.state == null) this.#holdUnknown(b.id, revision)
       else this.#apply(b.id, normalizeState(b.state), revision)
     }
+    // A snapshot lists every bridge your key can see. Forget one it no longer
+    // lists (your plan or scope changed): unknown, not its old state.
+    for (const id of this.bridges.keys()) if (!listed.has(id)) this.bridges.delete(id)
   }
 
   // A verified webhook. Returns true when you should re-read the Live API and

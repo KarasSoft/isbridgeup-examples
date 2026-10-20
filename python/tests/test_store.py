@@ -6,10 +6,11 @@ import tempfile
 import time
 import unittest
 
+from ibu.state import revision_of
 from ibu.store import Store
 from ibu.sync import Sync
 
-from .helpers import BRICKELL, ROUTES, fixture
+from .helpers import BRICKELL, FREMONT, ROUTES, fixture
 
 
 class Restart(unittest.TestCase):
@@ -67,6 +68,41 @@ class Restart(unittest.TestCase):
         store.close()
         self.assertEqual(len(Sync(ROUTES, Store(self.path)).states.seen), 1)
 
+
+    def test_a_restart_with_an_old_cache_shows_nothing_as_lowered(self):
+        """Regression audit R1: the cache says CLEAR, but the last read was long
+        ago (or the key was refused): CHECK until a read succeeds again."""
+        snap = fixture("live-after-recovery.json")
+        read_at = revision_of(snap["server_time"])
+        store = Store(self.path)
+        Sync(ROUTES, store, max_offline_s=90).apply_snapshot(snap, set_clock=False)
+        store.close()
+
+        store = Store(self.path)
+        sync = Sync(ROUTES, store, max_offline_s=90)
+        self.assertEqual(sync.route_statuses(read_at + 60_000)["Brickell loop"], "CLEAR")
+        self.assertEqual(set(sync.route_statuses(read_at + 3_600_000).values()), {"CHECK"})
+        sync.lose_access("subscription_ended")
+        store.close()
+
+        store = Store(self.path)
+        sync = Sync(ROUTES, store, max_offline_s=90)
+        self.assertEqual(sync.access_lost, "subscription_ended")
+        self.assertEqual(set(sync.route_statuses(read_at + 1000).values()), {"CHECK"})
+        store.close()
+
+    def test_a_bridge_a_snapshot_dropped_stays_gone_after_a_restart(self):
+        store = Store(self.path)
+        sync = Sync(ROUTES, store, max_offline_s=None)
+        sync.apply_snapshot(fixture("live-after-recovery.json"), set_clock=False)
+        sync.apply_snapshot(fixture("live-scope-changed.json"), set_clock=False)
+        store.close()
+
+        store = Store(self.path)
+        sync = Sync(ROUTES, store, max_offline_s=None)
+        self.assertNotIn(FREMONT, sync.states.bridges)
+        self.assertEqual(sync.route_statuses()["Fremont crossing"], "CHECK")
+        store.close()
 
 if __name__ == "__main__":
     unittest.main()

@@ -19,6 +19,8 @@
 //   IBU_PORT            receiver port, default 8080
 //   IBU_WEBHOOK_PATH    receiver path, default /webhooks/isbridgeup
 //   IBU_POLL_SECONDS    safety-net interval, default the API's ttl_seconds (at least 30)
+//   IBU_MAX_OFFLINE_SECONDS  without a successful Live API read for this long, every
+//                       bridge shows as unknown (CHECK); default 3 × the poll interval
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -62,16 +64,19 @@ export function loadRoutes() {
 
 // Run a fixtures scenario: no key, no network.
 export function replay(path) {
-  const sync = new Sync(loadRoutes().routes, new Store(':memory:'))
-  console.log(load(path).description)
+  const scenario = load(path)
+  const sync = new Sync(loadRoutes().routes, new Store(':memory:'), { maxOfflineS: scenario.max_offline_seconds ?? null })
+  console.log(scenario.description)
   for (const { kind, body, label, atMs } of steps(path)) {
     let note = ''
     let shown = label
     if (kind === 'snapshot') {
       sync.applySnapshot(body, { setClock: false })
-    } else {
+    } else if (kind === 'event') {
       if (sync.applyEvent(body)) note = '  → read the Live API again'
       shown = `${label} (${body.type})`
+    } else if (kind === 'api_error') {
+      note = `  → ${readFailed(sync, body.status, body.code)}`
     }
     console.log(`\n== ${kind} ${shown}${note}`)
     console.log(sync.board(atMs))
@@ -81,6 +86,16 @@ export function replay(path) {
 
 // Read a snapshot. Returns how long to wait before the next try (ms), or null
 // for the normal interval.
+// A refused key is shown at once; anything else only once the Live API has
+// been silent for longer than maxOfflineS.
+export function readFailed(sync, status, code) {
+  if (status === 401 || status === 403) {
+    sync.loseAccess(code ?? `HTTP ${status}`)
+    return 'every bridge is unknown until a read succeeds'
+  }
+  return 'the board holds for now; too long without an answer turns it to CHECK'
+}
+
 export async function refresh(sync, client) {
   try {
     sync.applySnapshot(await client.live())
@@ -88,6 +103,7 @@ export async function refresh(sync, client) {
   } catch (err) {
     if (err instanceof ApiError) {
       log(explain(err))
+      readFailed(sync, err.status, err.code)
       if (err.status === 429) return (err.retryAfter ?? 60) * 1000
       return err.status === 401 || err.status === 403 ? 300_000 : 60_000
     }
@@ -140,6 +156,7 @@ export async function run({ once = false } = {}) {
     snapshot = await client.live()
     if (missing.length) log(`not visible to this key, check ${routesPath}: ${missing.join(', ')}`)
   } catch (err) {
+    if (err instanceof ApiError) readFailed(sync, err.status, err.code) // an old cache stays unknown for anyone reading the store
     console.error(err instanceof ApiError ? explain(err) : `Can't reach ${client.base} (${err.cause?.code ?? err.name}).`)
     return 1
   }
@@ -148,6 +165,7 @@ export async function run({ once = false } = {}) {
   if (once) return 0
 
   const pollMs = 1000 * Number(process.env.IBU_POLL_SECONDS || Math.max(30, Number(snapshot.ttl_seconds) || 30))
+  sync.maxOfflineS = Number(process.env.IBU_MAX_OFFLINE_SECONDS || (3 * pollMs) / 1000)
   const waker = new Waker()
   let stopped = false
   let server = null

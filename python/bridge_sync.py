@@ -19,6 +19,8 @@ Settings (environment variables):
   IBU_PORT            receiver port, default 8080
   IBU_WEBHOOK_PATH    receiver path, default /webhooks/isbridgeup
   IBU_POLL_SECONDS    safety-net interval, default the API's ttl_seconds (at least 30)
+  IBU_MAX_OFFLINE_SECONDS  without a successful Live API read for this long, every
+                      bridge shows as unknown (CHECK); default 3 × the poll interval
 """
 
 from __future__ import annotations
@@ -80,18 +82,30 @@ def load_routes() -> tuple[list, pathlib.Path]:
 def replay(path: str) -> int:
     """Run a fixtures scenario: no key, no network."""
     routes, _ = load_routes()
-    sync = Sync(routes, Store(":memory:"))
-    print(load(path)["description"])
+    scenario = load(path)
+    sync = Sync(routes, Store(":memory:"), max_offline_s=scenario.get("max_offline_seconds"))
+    print(scenario["description"])
     for kind, body, label, at_ms in steps(path):
+        note = ""
         if kind == "snapshot":
             sync.apply_snapshot(body, set_clock=False)
-            note = ""
-        else:
+        elif kind == "event":
             note = "  → read the Live API again" if sync.apply_event(body) else ""
             label = f"{label} ({body.get('type')})"
+        elif kind == "api_error":
+            note = "  → " + read_failed(sync, body["status"], body.get("code"))
         print(f"\n== {kind} {label}{note}")
         print(sync.board(at_ms))
     return 0
+
+
+def read_failed(sync: Sync, status: int, code: str | None) -> str:
+    """A refused key is shown at once; anything else only once the Live API
+    has been silent for longer than max_offline_s."""
+    if status in (401, 403):
+        sync.lose_access(code or f"HTTP {status}")
+        return "every bridge is unknown until a read succeeds"
+    return "the board holds for now; too long without an answer turns it to CHECK"
 
 
 def refresh(sync: Sync, client: Client) -> float | None:
@@ -102,6 +116,7 @@ def refresh(sync: Sync, client: Client) -> float | None:
         return None
     except ApiError as err:
         log(explain(err))
+        read_failed(sync, err.status, err.code)
         if err.status == 429:
             return float(err.retry_after or 60)
         return 300.0 if err.status in (401, 403) else 60.0
@@ -125,6 +140,7 @@ def run(once: bool) -> int:
         missing = sync.learn_catalog(client.bridges())
         snapshot = client.live()
     except ApiError as err:
+        read_failed(sync, err.status, err.code)  # an old cache stays unknown for anyone reading the store
         print(explain(err), file=sys.stderr)
         return 1
     except (OSError, ValueError, http.client.HTTPException) as err:
@@ -138,6 +154,7 @@ def run(once: bool) -> int:
         return 0
 
     poll_s = float(os.environ.get("IBU_POLL_SECONDS") or max(30, int(snapshot.get("ttl_seconds") or 30)))
+    sync.max_offline_s = float(os.environ.get("IBU_MAX_OFFLINE_SECONDS") or 3 * poll_s)
     wake, stop = threading.Event(), threading.Event()
     server = None
     secret = os.environ.get("IBU_WEBHOOK_SECRET", "").strip()

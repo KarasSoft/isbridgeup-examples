@@ -42,12 +42,18 @@ class BridgeStates:
     def apply_snapshot(self, snapshot):
         """GET /v1/bridges/live: at start-up, when apply_event asks for it,
         and about every ttl_seconds as a safety net."""
+        listed = set()
         for b in snapshot["bridges"]:
+            listed.add(b["id"])
             revision = revision_of(b.get("state_changed_at"))
             if b.get("state") is None:
                 self._hold_unknown(b["id"], revision)
             else:
                 self._apply(b["id"], normalize_state(b["state"]), revision)
+        # A snapshot lists every bridge your key can see. Forget one it no
+        # longer lists (your plan or scope changed): unknown, not its old state.
+        for bridge_id in [bid for bid in self.bridges if bid not in listed]:
+            del self.bridges[bridge_id]
 
     def apply_event(self, event):
         """A verified webhook. Returns True when you should re-read the Live

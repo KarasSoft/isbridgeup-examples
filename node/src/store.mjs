@@ -1,5 +1,5 @@
 // Durable state in one JSON file: the state per bridge, the event ids already
-// handled, and the webhook inbox. Every change is written to a temporary file
+// handled, the webhook inbox, and when the Live API last answered. Every change is written to a temporary file
 // and renamed over the old one, so a crash never leaves half a file.
 //
 // The inbox is what makes it safe to answer a delivery quickly: the receiver
@@ -8,7 +8,8 @@
 // inbox on the next start.
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 
-const empty = () => ({ version: 1, bridges: {}, seen: {}, inbox: [], nextSeq: 1 })
+const empty = () => ({ version: 1, bridges: {}, seen: {}, inbox: [], nextSeq: 1, link: emptyLink() })
+const emptyLink = () => ({ lastSyncMs: null, accessLost: null })
 
 export class Store {
   constructor(path) {
@@ -20,6 +21,17 @@ export class Store {
   load(states) {
     for (const [id, b] of Object.entries(this.data.bridges)) states.bridges.set(id, { ...b })
     for (const [id, at] of Object.entries(this.data.seen)) states.seen.set(id, at)
+  }
+
+  // { lastSyncMs, accessLost } as saved before a restart: an old cache is
+  // shown as unknown until a read succeeds again.
+  loadLink() {
+    return { ...emptyLink(), ...this.data.link }
+  }
+
+  saveLink(lastSyncMs, accessLost) {
+    this.data.link = { lastSyncMs, accessLost }
+    this.#flush()
   }
 
   // Persist a verified delivery. False when that event is already queued.

@@ -1,0 +1,40 @@
+{
+  "description": "The Live API refuses the key (403 subscription_ended). Every route turns CHECK at once, though the stored states still say lowered: nobody vouches for them now.",
+  "max_offline_seconds": 90,
+  "steps": [
+    {
+      "snapshot": "live-after-recovery.json"
+    },
+    {
+      "api_error": {
+        "status": 403,
+        "code": "subscription_ended",
+        "at": "2026-10-16T14:22:00+00:00"
+      }
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "CLEAR",
+        "revision": 1792159740000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "CLEAR",
+        "revision": 1792160430000,
+        "hold": false
+      }
+    },
+    "reread": [],
+    "routes": {
+      "Brickell loop": "CHECK",
+      "Fremont crossing": "CHECK"
+    }
+  }
+}

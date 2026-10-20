@@ -6,7 +6,8 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, test } from 'node:test'
 import { Store } from '../src/store.mjs'
 import { Sync } from '../src/sync.mjs'
-import { BRICKELL, ROUTES, fixture } from './helpers.mjs'
+import { revisionOf } from '../src/state.mjs'
+import { BRICKELL, FREMONT, ROUTES, fixture } from './helpers.mjs'
 
 let dir
 let path
@@ -56,4 +57,31 @@ test('old handled ids are pruned', () => {
   assert.equal(sync.states.seen.has('handled-ten-days-ago'), false)
   assert.equal(sync.states.seen.size, 1)
   assert.equal(new Sync(ROUTES, new Store(path)).states.seen.size, 1)
+})
+
+// Regression audit R1: the cache says CLEAR, but the last read was long ago
+// (or the key was refused): CHECK until a read succeeds again.
+test('a restart with an old cache shows nothing as lowered', () => {
+  const snap = fixture('live-after-recovery.json')
+  const readAt = revisionOf(snap.server_time)
+  new Sync(ROUTES, new Store(path), { maxOfflineS: 90 }).applySnapshot(snap, { setClock: false })
+
+  let sync = new Sync(ROUTES, new Store(path), { maxOfflineS: 90 })
+  assert.equal(sync.routeStatuses(readAt + 60_000)['Brickell loop'], 'CLEAR')
+  assert.deepEqual(new Set(Object.values(sync.routeStatuses(readAt + 3_600_000))), new Set(['CHECK']))
+  sync.loseAccess('subscription_ended')
+
+  sync = new Sync(ROUTES, new Store(path), { maxOfflineS: 90 })
+  assert.equal(sync.accessLost, 'subscription_ended')
+  assert.deepEqual(new Set(Object.values(sync.routeStatuses(readAt + 1000))), new Set(['CHECK']))
+})
+
+test('a bridge a snapshot dropped stays gone after a restart', () => {
+  const sync = new Sync(ROUTES, new Store(path), { maxOfflineS: null })
+  sync.applySnapshot(fixture('live-after-recovery.json'), { setClock: false })
+  sync.applySnapshot(fixture('live-scope-changed.json'), { setClock: false })
+
+  const again = new Sync(ROUTES, new Store(path), { maxOfflineS: null })
+  assert.equal(again.states.bridges.has(FREMONT), false)
+  assert.equal(again.routeStatuses()['Fremont crossing'], 'CHECK')
 })

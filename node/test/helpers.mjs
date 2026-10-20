@@ -12,5 +12,6 @@ export const ROUTES = JSON.parse(readFileSync(join(ROOT, 'routes.example.json'),
 export const SECRET = 'whsec_examples_test'
 
 export const BRICKELL = 'a1b2c3d4-0002-4000-8000-000000000001'
+export const FREMONT = 'a1b2c3d4-0002-4000-8000-000000000022'
 
 export const fixture = (name) => JSON.parse(readFileSync(join(FIXTURES, name), 'utf8'))

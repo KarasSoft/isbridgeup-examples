@@ -1,0 +1,45 @@
+{
+  "description": "The Live API stops answering (here a 503, then nothing). One failed read changes nothing; once there has been no answer for longer than max_offline_seconds, every route turns CHECK.",
+  "max_offline_seconds": 90,
+  "steps": [
+    {
+      "snapshot": "live-after-recovery.json"
+    },
+    {
+      "api_error": {
+        "status": 503,
+        "at": "2026-10-16T14:22:00+00:00"
+      }
+    },
+    {
+      "clock": "2026-10-16T14:22:55+00:00"
+    },
+    {
+      "clock": "2026-10-16T14:23:31+00:00"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "CLEAR",
+        "revision": 1792159740000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "CLEAR",
+        "revision": 1792160430000,
+        "hold": false
+      }
+    },
+    "reread": [],
+    "routes": {
+      "Brickell loop": "CHECK",
+      "Fremont crossing": "CHECK"
+    }
+  }
+}

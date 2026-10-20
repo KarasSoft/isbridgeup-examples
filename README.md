@@ -11,8 +11,8 @@ no dependencies.
 - **verify**: the webhook signature check, the same code as in the docs.
 - **send-event**: signs a sample event and posts it to your local receiver, so you can try
   retries, late events and bad signatures without waiting for a real bridge.
-- **fixtures**: API responses and webhook events in the exact v1 format, and ten scenarios with
-  the result each one must end in. Both languages run all of them in their tests.
+- **fixtures**: API responses and webhook events in the exact v1 format, and fourteen scenarios
+  with the result each one must end in. Both languages run all of them in their tests.
 
 The service decides nothing about routing: it tells your systems which bridges are raised,
 lowered or unknown. What a dispatcher or a router does with that is yours.
@@ -54,6 +54,10 @@ not a countdown.
 | `08-unknown-held-until-snapshot` | Events for a bridge the API can't vouch for, even "lowered" | Unknown until a snapshot shows a state |
 | `09-recovered-is-not-clear` | `source.outage` degraded, then recovered | Still unknown: recovered is not lowered |
 | `10-snapshot-after-recovery` | The re-read after recovery | Every bridge known again, routes clear |
+| `11-refused-key-is-check` | The Live API answers `403 subscription_ended` | Every route CHECK at once |
+| `12-no-answer-is-check` | Reads fail (`503`, then silence) | Unchanged at first, every route CHECK after 90 s without an answer |
+| `13-read-again-lifts-check` | A successful read after a refused key | Routes clear again |
+| `14-bridge-left-scope-is-unknown` | A snapshot no longer lists Fremont (the plan changed) | Fremont forgotten, its route CHECK |
 
 ## Run it with your key
 
@@ -84,14 +88,18 @@ export IBU_WEBHOOK_SECRET=whsec_local_test
 python3 bridge_sync.py                    # terminal 1: receiver on http://localhost:8080/webhooks/isbridgeup
 
 export IBU_WEBHOOK_SECRET=whsec_local_test
-python3 send_event.py ../fixtures/events/brickell-lowered.json             # terminal 2: the board changes
-python3 send_event.py ../fixtures/events/brickell-lowered.json --times 2   # a retry: applied once
-python3 send_event.py ../fixtures/events/brickell-raised.json              # older: ignored
-python3 send_event.py ../fixtures/events/brickell-lowered.json --age 600   # stale: HTTP 401
+python3 send_event.py ../fixtures/events/brickell-lowered.json             # terminal 2: HTTP 204, accepted
+python3 send_event.py ../fixtures/events/brickell-lowered.json --times 2   # a retry: 204 twice, handled once
+python3 send_event.py ../fixtures/events/brickell-lowered.json --age 600   # a stale signature: HTTP 401
 python3 send_event.py ../fixtures/events/outage-degraded.json              # the service reads the Live API again
 ```
 
 (`node send-event.mjs …` takes the same arguments.)
+
+`204` means the delivery was verified and stored, not that the board changed. The sample events
+are from 16 October 2026, and your board starts from today's Live API state, which is newer: the
+service rightly ignores an event older than the state it holds. To watch the board change step by
+step, replay a scenario (`--replay`, above); with a live endpoint, real changes arrive on their own.
 
 For real deliveries:
 
@@ -120,6 +128,14 @@ These are the rules from [Keep state in sync](https://dash.isbridgeup.com/docs/#
   event to the inbox in the state file and answers `204`; the worker applies it afterwards.
   Nothing slow happens before the answer.
 - **Count minutes on the API's clock** (`server_time`), not your own.
+- **A snapshot lists every bridge your key can see.** A bridge it no longer lists (your plan or
+  scope changed) is forgotten and shows as unknown, never kept at its old state.
+- **Keep two ages apart.** How old a bridge's state is belongs to us: while the API gives a state,
+  it vouches for it, however old `state_changed_at` or `observed_at` is. How long ago the Live
+  API last answered you belongs to you: the service keeps that time in the state file. When the
+  API refuses the key (`401`/`403`), every route turns CHECK at once; when reads fail (timeouts,
+  `5xx`, a long `429`) for longer than `IBU_MAX_OFFLINE_SECONDS`, the same. The next successful
+  read brings the board back. A restart with an old state file shows CHECK until a read succeeds.
 
 ## Settings
 
@@ -133,6 +149,7 @@ These are the rules from [Keep state in sync](https://dash.isbridgeup.com/docs/#
 | `IBU_PORT` | `8080` | Receiver port. |
 | `IBU_WEBHOOK_PATH` | `/webhooks/isbridgeup` | Receiver path. |
 | `IBU_POLL_SECONDS` | the API's `ttl_seconds`, at least 30 | Safety-net interval. |
+| `IBU_MAX_OFFLINE_SECONDS` | 3 × the poll interval | Without a successful Live API read for this long, every route shows CHECK. |
 
 Run one bridge-sync per account and share its state with your drivers, robots and dispatch
 tools. Reading every 30 seconds for the whole 7-day trial is 20,160 requests, which fits the

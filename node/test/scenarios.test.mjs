@@ -3,30 +3,36 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
+import { readFailed } from '../bridge-sync.mjs'
 import { load, steps } from '../src/scenarios.mjs'
 import { normalizeState, revisionOf } from '../src/state.mjs'
 import { Store } from '../src/store.mjs'
 import { Sync } from '../src/sync.mjs'
 import { FIXTURES, ROUTES, SCENARIOS, fixture } from './helpers.mjs'
 
+// Play a scenario. Returns the Sync, what each event asked for, and the
+// scenario's last moment (route statuses are taken then).
 export function run(path) {
-  const sync = new Sync(ROUTES, new Store(':memory:'))
+  const sync = new Sync(ROUTES, new Store(':memory:'), { maxOfflineS: load(path).max_offline_seconds ?? null })
   const reread = []
-  for (const { kind, body } of steps(path)) {
+  let lastMs = 0
+  for (const { kind, body, atMs } of steps(path)) {
+    lastMs = atMs
     if (kind === 'snapshot') sync.applySnapshot(body, { setClock: false })
-    else reread.push(sync.applyEvent(body))
+    else if (kind === 'event') reread.push(sync.applyEvent(body))
+    else if (kind === 'api_error') readFailed(sync, body.status, body.code)
   }
-  return { sync, reread }
+  return { sync, reread, atMs: lastMs }
 }
 
 test('every scenario ends as described', () => {
   assert.ok(SCENARIOS.length >= 10)
   for (const path of SCENARIOS) {
     const { expect } = load(path)
-    const { sync, reread } = run(path)
+    const { sync, reread, atMs } = run(path)
     assert.deepEqual(Object.fromEntries(sync.states.bridges), expect.bridges, path)
     assert.deepEqual(reread, expect.reread, path)
-    assert.deepEqual(sync.routeStatuses(), expect.routes, path)
+    assert.deepEqual(sync.routeStatuses(atMs), expect.routes, path)
   }
 })
 

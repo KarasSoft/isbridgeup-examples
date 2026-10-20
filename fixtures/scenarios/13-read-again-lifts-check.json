@@ -1,0 +1,43 @@
+{
+  "description": "After a refused key, the next successful read shows the bridges again.",
+  "max_offline_seconds": 90,
+  "steps": [
+    {
+      "snapshot": "live-after-recovery.json"
+    },
+    {
+      "api_error": {
+        "status": 401,
+        "code": "invalid_api_key",
+        "at": "2026-10-16T14:22:00+00:00"
+      }
+    },
+    {
+      "snapshot": "live-later.json"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "CLEAR",
+        "revision": 1792159740000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "CLEAR",
+        "revision": 1792160430000,
+        "hold": false
+      }
+    },
+    "reread": [],
+    "routes": {
+      "Brickell loop": "CLEAR",
+      "Fremont crossing": "CLEAR"
+    }
+  }
+}
