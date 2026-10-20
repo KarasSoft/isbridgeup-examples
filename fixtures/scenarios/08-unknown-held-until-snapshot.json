@@ -1,0 +1,41 @@
+{
+  "description": "While the API can't vouch for Fremont, its events say UNKNOWN; even the feed's own event that it is lowered again only triggers a re-read. A snapshot decides.",
+  "steps": [
+    {
+      "snapshot": "live.json"
+    },
+    {
+      "event": "events/fremont-community-report.json"
+    },
+    {
+      "event": "events/fremont-feed-back.json"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "UP",
+        "revision": 1792159120000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "UNKNOWN",
+        "revision": 1792160430000,
+        "hold": true
+      }
+    },
+    "reread": [
+      true,
+      true
+    ],
+    "routes": {
+      "Brickell loop": "BLOCKED",
+      "Fremont crossing": "CHECK"
+    }
+  }
+}

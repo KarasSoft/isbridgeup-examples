@@ -1,0 +1,14 @@
+# State files bridge-sync writes
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+bridge-sync.json
+bridge-sync.json.tmp
+
+# Your own routes and secrets
+.env
+routes.json
+
+__pycache__/
+node_modules/
+.DS_Store

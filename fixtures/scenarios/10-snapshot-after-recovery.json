@@ -1,0 +1,44 @@
+{
+  "description": "The re-read after recovery shows every bridge again, and the route is clear.",
+  "steps": [
+    {
+      "snapshot": "live.json"
+    },
+    {
+      "event": "events/outage-degraded.json"
+    },
+    {
+      "event": "events/outage-recovered.json"
+    },
+    {
+      "snapshot": "live-after-recovery.json"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "CLEAR",
+        "revision": 1792159740000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "CLEAR",
+        "revision": 1792160430000,
+        "hold": false
+      }
+    },
+    "reread": [
+      true,
+      true
+    ],
+    "routes": {
+      "Brickell loop": "CLEAR",
+      "Fremont crossing": "CLEAR"
+    }
+  }
+}

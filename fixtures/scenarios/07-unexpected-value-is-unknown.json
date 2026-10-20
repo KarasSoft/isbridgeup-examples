@@ -1,0 +1,37 @@
+{
+  "description": "A state value the client doesn't know is unknown, never lowered.",
+  "steps": [
+    {
+      "snapshot": "live.json"
+    },
+    {
+      "event": "events/synthetic-unexpected-state.json"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "UP",
+        "revision": 1792159120000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "UNKNOWN",
+        "revision": 1792159800000,
+        "hold": true
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "UNKNOWN",
+        "revision": 1792156815000,
+        "hold": true
+      }
+    },
+    "reread": [
+      true
+    ],
+    "routes": {
+      "Brickell loop": "BLOCKED",
+      "Fremont crossing": "CHECK"
+    }
+  }
+}

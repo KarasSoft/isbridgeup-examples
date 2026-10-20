@@ -1,0 +1,16 @@
+{
+  "name": "isbridgeup-examples-node",
+  "version": "1.0.0",
+  "private": true,
+  "description": "IsBridgeUp API examples: bridge-sync service, webhook receiver, signature verification (no dependencies)",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node bridge-sync.mjs",
+    "replay": "node bridge-sync.mjs --replay ../fixtures/scenarios/10-snapshot-after-recovery.json",
+    "test": "node --test \"test/*.test.mjs\""
+  }
+}

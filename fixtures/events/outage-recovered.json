@@ -1,0 +1,12 @@
+{
+  "id": "7e2f3a4b-5c6d-4e7f-8a9b-0c1d2e3f4a5b",
+  "type": "source.outage",
+  "created_at": "2026-10-16T14:21:00+00:00",
+  "data": {
+    "status": "recovered",
+    "bridge_ids": [
+      "a1b2c3d4-0002-4000-8000-000000000022"
+    ],
+    "recovered_at": "2026-10-16T14:21:00+00:00"
+  }
+}

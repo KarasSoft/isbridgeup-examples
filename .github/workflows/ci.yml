@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  python:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.12", "3.14"]
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m unittest discover -s tests -t . -v
+
+  node:
+    name: Node.js ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    defaults:
+      run:
+        working-directory: node
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test
+
+  same-output:
+    name: Python and Node print the same boards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          for s in fixtures/scenarios/*.json; do
+            diff <(cd python && python bridge_sync.py --replay "../$s") <(cd node && node bridge-sync.mjs --replay "../$s")
+          done

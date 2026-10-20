@@ -1,0 +1,5 @@
+BLOCKED  Brickell loop
+  Brickell Avenue Bridge: raised for 3 min (past raises here: median 8 min, 9 in 10 within 14 min)
+  SW 2nd Avenue Bridge: lowered for 135 min
+CHECK    Fremont crossing
+  Fremont Bridge: unknown, we can't vouch for it right now

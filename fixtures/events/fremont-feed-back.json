@@ -1,0 +1,13 @@
+{
+  "id": "e6309c24-7dbf-4e50-a132-4c8d9e0f1a23",
+  "type": "status.changed",
+  "created_at": "2026-10-16T14:20:31+00:00",
+  "data": {
+    "bridge_id": "a1b2c3d4-0002-4000-8000-000000000022",
+    "old_status": "UNCONFIRMED_UP",
+    "new_status": "DOWN",
+    "state": "CLEAR",
+    "state_changed_at": "2026-10-16T14:20:30+00:00",
+    "revision": 1792160430000
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "v": 1,
+  "server_time": "2026-10-16T14:21:30+00:00",
+  "ttl_seconds": 30,
+  "bridges": [
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000001",
+      "slug": "brickell-avenue",
+      "name": "Brickell Avenue Bridge",
+      "state": "CLEAR",
+      "state_changed_at": "2026-10-16T14:09:00+00:00",
+      "since_minutes": 12,
+      "data_as_of": "2026-10-16T14:09:00+00:00",
+      "observed_at": "2026-10-16T14:09:00+00:00",
+      "feed_stale": false,
+      "unknown_reason": null,
+      "raise_duration": {
+        "median_minutes": 8,
+        "p90_minutes": 14,
+        "typical_range_minutes": {
+          "low": 6,
+          "high": 12,
+          "share_pct": 70
+        },
+        "sample_size": 412,
+        "window_days": 90,
+        "as_of": "2026-10-12T04:00:00+00:00"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "slug": "sw-2nd-avenue",
+      "name": "SW 2nd Avenue Bridge",
+      "state": "CLEAR",
+      "state_changed_at": "2026-10-16T11:47:02+00:00",
+      "since_minutes": 154,
+      "data_as_of": "2026-10-16T11:47:02+00:00",
+      "observed_at": "2026-10-16T11:47:02+00:00",
+      "feed_stale": false,
+      "unknown_reason": null,
+      "raise_duration": {
+        "median_minutes": 7,
+        "p90_minutes": 12,
+        "typical_range_minutes": {
+          "low": 5,
+          "high": 10,
+          "share_pct": 68
+        },
+        "sample_size": 377,
+        "window_days": 90,
+        "as_of": "2026-10-12T04:00:00+00:00"
+      }
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000022",
+      "slug": "fremont",
+      "name": "Fremont Bridge",
+      "state": "CLEAR",
+      "state_changed_at": "2026-10-16T14:20:30+00:00",
+      "since_minutes": 1,
+      "data_as_of": "2026-10-16T14:20:30+00:00",
+      "observed_at": "2026-10-16T14:21:22+00:00",
+      "feed_stale": false,
+      "unknown_reason": null,
+      "raise_duration": {
+        "median_minutes": 9,
+        "p90_minutes": 15,
+        "typical_range_minutes": {
+          "low": 6,
+          "high": 12,
+          "share_pct": 66
+        },
+        "sample_size": 1180,
+        "window_days": 90,
+        "as_of": "2026-10-12T04:00:00+00:00"
+      }
+    }
+  ]
+}

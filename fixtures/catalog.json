@@ -1,0 +1,32 @@
+{
+  "v": 1,
+  "bridges": [
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000001",
+      "slug": "brickell-avenue",
+      "name": "Brickell Avenue Bridge",
+      "lat": 25.769987,
+      "lon": -80.190008,
+      "city": "Miami, FL",
+      "timezone": "America/New_York"
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "slug": "sw-2nd-avenue",
+      "name": "SW 2nd Avenue Bridge",
+      "lat": 25.768953,
+      "lon": -80.197623,
+      "city": "Miami, FL",
+      "timezone": "America/New_York"
+    },
+    {
+      "id": "a1b2c3d4-0002-4000-8000-000000000022",
+      "slug": "fremont",
+      "name": "Fremont Bridge",
+      "lat": 47.647603,
+      "lon": -122.34973,
+      "city": "Seattle, WA",
+      "timezone": "America/Los_Angeles"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "description": "An older event that arrives late (here the raise, after the lowering) can't undo a newer state.",
+  "steps": [
+    {
+      "snapshot": "live.json"
+    },
+    {
+      "event": "events/brickell-lowered.json"
+    },
+    {
+      "event": "events/brickell-raised.json"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "CLEAR",
+        "revision": 1792159740000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "UNKNOWN",
+        "revision": 1792156815000,
+        "hold": true
+      }
+    },
+    "reread": [
+      false,
+      false
+    ],
+    "routes": {
+      "Brickell loop": "CLEAR",
+      "Fremont crossing": "CHECK"
+    }
+  }
+}

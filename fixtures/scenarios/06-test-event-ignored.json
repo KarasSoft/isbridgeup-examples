@@ -1,0 +1,37 @@
+{
+  "description": "The portal's test event carries no bridge: nothing changes.",
+  "steps": [
+    {
+      "snapshot": "live.json"
+    },
+    {
+      "event": "events/test-event.json"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "UP",
+        "revision": 1792159120000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "UNKNOWN",
+        "revision": 1792156815000,
+        "hold": true
+      }
+    },
+    "reread": [
+      false
+    ],
+    "routes": {
+      "Brickell loop": "BLOCKED",
+      "Fremont crossing": "CHECK"
+    }
+  }
+}
