@@ -1,0 +1,41 @@
+{
+  "description": "Fremont leaves the snapshot (the plan's scope changed), then a delayed CLEAR webhook for it arrives. It stays CHECK and asks for a re-read: only a snapshot that lists the bridge again lifts it.",
+  "max_offline_seconds": 90,
+  "steps": [
+    {
+      "snapshot": "live-after-recovery.json"
+    },
+    {
+      "snapshot": "live-scope-changed.json"
+    },
+    {
+      "event": "events/fremont-feed-back.json"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "CLEAR",
+        "revision": 1792159740000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "UNKNOWN",
+        "revision": 1792160430000,
+        "hold": true
+      }
+    },
+    "reread": [
+      true
+    ],
+    "routes": {
+      "Brickell loop": "CLEAR",
+      "Fremont crossing": "CHECK"
+    }
+  }
+}

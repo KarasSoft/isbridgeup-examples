@@ -1,0 +1,37 @@
+{
+  "description": "The snapshot carries a state value this client doesn't know (here a synthetic one). Brickell is held unknown like null: a later lowered webhook asks for a re-read instead of lifting it.",
+  "steps": [
+    {
+      "snapshot": "synthetic-live-unrecognized-state.json"
+    },
+    {
+      "event": "events/brickell-lowered.json"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "UNKNOWN",
+        "revision": 1792159740000,
+        "hold": true
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "UNKNOWN",
+        "revision": 1792156815000,
+        "hold": true
+      }
+    },
+    "reread": [
+      true
+    ],
+    "routes": {
+      "Brickell loop": "CHECK",
+      "Fremont crossing": "CHECK"
+    }
+  }
+}

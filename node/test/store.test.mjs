@@ -76,12 +76,17 @@ test('a restart with an old cache shows nothing as lowered', () => {
   assert.deepEqual(new Set(Object.values(sync.routeStatuses(readAt + 1000))), new Set(['CHECK']))
 })
 
-test('a bridge a snapshot dropped stays gone after a restart', () => {
+// Re-audit A2: scope drop → restart → a delayed CLEAR webhook must not bring
+// the bridge back; only a snapshot that lists it again does.
+test('a bridge a snapshot dropped stays held after a restart', () => {
   const sync = new Sync(ROUTES, new Store(path), { maxOfflineS: null })
   sync.applySnapshot(fixture('live-after-recovery.json'), { setClock: false })
   sync.applySnapshot(fixture('live-scope-changed.json'), { setClock: false })
 
   const again = new Sync(ROUTES, new Store(path), { maxOfflineS: null })
-  assert.equal(again.states.bridges.has(FREMONT), false)
+  assert.equal(again.states.bridges.get(FREMONT).hold, true)
+  assert.equal(again.applyEvent(fixture('events/fremont-feed-back.json')), true) // asks for a re-read
   assert.equal(again.routeStatuses()['Fremont crossing'], 'CHECK')
+  again.applySnapshot(fixture('live-later.json'), { setClock: false }) // listed again
+  assert.equal(again.routeStatuses()['Fremont crossing'], 'CLEAR')
 })

@@ -91,7 +91,9 @@ class Restart(unittest.TestCase):
         self.assertEqual(set(sync.route_statuses(read_at + 1000).values()), {"CHECK"})
         store.close()
 
-    def test_a_bridge_a_snapshot_dropped_stays_gone_after_a_restart(self):
+    def test_a_bridge_a_snapshot_dropped_stays_held_after_a_restart(self):
+        """Re-audit A2: scope drop → restart → a delayed CLEAR webhook must not
+        bring the bridge back; only a snapshot that lists it again does."""
         store = Store(self.path)
         sync = Sync(ROUTES, store, max_offline_s=None)
         sync.apply_snapshot(fixture("live-after-recovery.json"), set_clock=False)
@@ -100,8 +102,11 @@ class Restart(unittest.TestCase):
 
         store = Store(self.path)
         sync = Sync(ROUTES, store, max_offline_s=None)
-        self.assertNotIn(FREMONT, sync.states.bridges)
+        self.assertTrue(sync.states.bridges[FREMONT]["hold"])
+        self.assertTrue(sync.apply_event(fixture("events/fremont-feed-back.json")))   # asks for a re-read
         self.assertEqual(sync.route_statuses()["Fremont crossing"], "CHECK")
+        sync.apply_snapshot(fixture("live-later.json"), set_clock=False)               # listed again
+        self.assertEqual(sync.route_statuses()["Fremont crossing"], "CLEAR")
         store.close()
 
 if __name__ == "__main__":

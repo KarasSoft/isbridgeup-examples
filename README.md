@@ -11,7 +11,7 @@ no dependencies.
 - **verify**: the webhook signature check, the same code as in the docs.
 - **send-event**: signs a sample event and posts it to your local receiver, so you can try
   retries, late events and bad signatures without waiting for a real bridge.
-- **fixtures**: API responses and webhook events in the exact v1 format, and fourteen scenarios
+- **fixtures**: API responses and webhook events in the exact v1 format, and seventeen scenarios
   with the result each one must end in. Both languages run all of them in their tests.
 
 The service decides nothing about routing: it tells your systems which bridges are raised,
@@ -57,7 +57,10 @@ not a countdown.
 | `11-refused-key-is-check` | The Live API answers `403 subscription_ended` | Every route CHECK at once |
 | `12-no-answer-is-check` | Reads fail (`503`, then silence) | Unchanged at first, every route CHECK after 90 s without an answer |
 | `13-read-again-lifts-check` | A successful read after a refused key | Routes clear again |
-| `14-bridge-left-scope-is-unknown` | A snapshot no longer lists Fremont (the plan changed) | Fremont forgotten, its route CHECK |
+| `14-bridge-left-scope-is-unknown` | A snapshot no longer lists Fremont (the plan changed) | Fremont held unknown, its route CHECK |
+| `15-late-event-after-scope-drop-is-check` | Then a delayed lowered webhook for Fremont | Still CHECK; the service reads the Live API again |
+| `16-event-for-unlisted-bridge-is-check` | A webhook for a bridge the snapshot never listed | CHECK until a snapshot lists it |
+| `17-unrecognized-state-is-held` | A state value the client doesn't know in the snapshot, then a lowered webhook | Held unknown until a snapshot shows a known state |
 
 ## Run it with your key
 
@@ -129,7 +132,8 @@ These are the rules from [Keep state in sync](https://dash.isbridgeup.com/docs/#
   Nothing slow happens before the answer.
 - **Count minutes on the API's clock** (`server_time`), not your own.
 - **A snapshot lists every bridge your key can see.** A bridge it no longer lists (your plan or
-  scope changed) is forgotten and shows as unknown, never kept at its old state.
+  scope changed) is held unknown, and so is one a webhook names before any snapshot listed it:
+  only a snapshot that lists the bridge lifts that, never a late or retried webhook.
 - **Keep two ages apart.** How old a bridge's state is belongs to us: while the API gives a state,
   it vouches for it, however old `state_changed_at` or `observed_at` is. How long ago the Live
   API last answered you belongs to you: the service keeps that time in the state file. When the

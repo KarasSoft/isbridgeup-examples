@@ -33,12 +33,14 @@ export class BridgeStates {
     for (const b of snapshot.bridges) {
       listed.add(b.id)
       const revision = revisionOf(b.state_changed_at)
-      if (b.state == null) this.#holdUnknown(b.id, revision)
-      else this.#apply(b.id, normalizeState(b.state), revision)
+      const state = normalizeState(b.state)
+      if (state === 'UNKNOWN') this.#holdUnknown(b.id, revision) // null, or a value this client doesn't know
+      else this.#apply(b.id, state, revision)
     }
-    // A snapshot lists every bridge your key can see. Forget one it no longer
-    // lists (your plan or scope changed): unknown, not its old state.
-    for (const id of this.bridges.keys()) if (!listed.has(id)) this.bridges.delete(id)
+    // A snapshot lists every bridge your key can see. One it no longer lists
+    // (your plan or scope changed) is held unknown, its revision kept: only a
+    // snapshot that lists it again lifts that, never a late webhook.
+    for (const id of [...this.bridges.keys()]) if (!listed.has(id)) this.#holdUnknown(id)
   }
 
   // A verified webhook. Returns true when you should re-read the Live API and
@@ -50,7 +52,8 @@ export class BridgeStates {
     if (data.test) return false // the portal's test event carries no bridge
     if (event.type === 'status.changed') {
       const state = normalizeState(data.state)
-      if (state === 'UNKNOWN' || this.bridges.get(data.bridge_id)?.hold) {
+      // A bridge we hold nothing for isn't in your snapshot: read it again.
+      if (state === 'UNKNOWN' || (this.bridges.get(data.bridge_id)?.hold ?? true)) {
         // Only a snapshot lifts an unknown: a feed can go quiet without a new
         // event, so a retried event can be older news than it.
         this.#holdUnknown(data.bridge_id, data.revision ?? null)

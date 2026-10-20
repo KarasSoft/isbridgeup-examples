@@ -37,7 +37,7 @@ class BridgeSyncTest(unittest.TestCase):
                 out = io.StringIO()
                 with contextlib.redirect_stdout(out):
                     self.assertEqual(bridge_sync.replay(str(path)), 0)
-                self.assertRegex(out.getvalue(), r"== snapshot live[\w-]*\.json")
+                self.assertRegex(out.getvalue(), r"== snapshot [\w-]*live[\w-]*\.json")
 
     def test_refresh_backs_off(self):
         sync = Sync(ROUTES, Store(":memory:"))

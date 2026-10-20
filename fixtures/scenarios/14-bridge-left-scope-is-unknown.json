@@ -1,5 +1,5 @@
 {
-  "description": "A snapshot lists every bridge the key can see. Fremont is no longer listed (the plan's scope changed), so it is forgotten and its route turns CHECK instead of keeping the old lowered state.",
+  "description": "A snapshot lists every bridge the key can see. Fremont is no longer listed (the plan's scope changed), so it is held unknown and its route turns CHECK instead of keeping the old lowered state.",
   "max_offline_seconds": 90,
   "steps": [
     {
@@ -20,6 +20,11 @@
         "state": "CLEAR",
         "revision": 1792151222000,
         "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "UNKNOWN",
+        "revision": 1792160430000,
+        "hold": true
       }
     },
     "reread": [],

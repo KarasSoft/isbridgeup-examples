@@ -46,14 +46,16 @@ class BridgeStates:
         for b in snapshot["bridges"]:
             listed.add(b["id"])
             revision = revision_of(b.get("state_changed_at"))
-            if b.get("state") is None:
+            state = normalize_state(b.get("state"))
+            if state == "UNKNOWN":  # null, or a value this client doesn't know
                 self._hold_unknown(b["id"], revision)
             else:
-                self._apply(b["id"], normalize_state(b["state"]), revision)
-        # A snapshot lists every bridge your key can see. Forget one it no
-        # longer lists (your plan or scope changed): unknown, not its old state.
+                self._apply(b["id"], state, revision)
+        # A snapshot lists every bridge your key can see. One it no longer lists
+        # (your plan or scope changed) is held unknown, its revision kept: only a
+        # snapshot that lists it again lifts that, never a late webhook.
         for bridge_id in [bid for bid in self.bridges if bid not in listed]:
-            del self.bridges[bridge_id]
+            self._hold_unknown(bridge_id)
 
     def apply_event(self, event):
         """A verified webhook. Returns True when you should re-read the Live
@@ -66,7 +68,8 @@ class BridgeStates:
             return False  # the portal's test event carries no bridge
         if event["type"] == "status.changed":
             bridge_id, state = data["bridge_id"], normalize_state(data.get("state"))
-            if state == "UNKNOWN" or self.bridges.get(bridge_id, {}).get("hold"):
+            # A bridge we hold nothing for isn't in your snapshot: read it again.
+            if state == "UNKNOWN" or self.bridges.get(bridge_id, {"hold": True})["hold"]:
                 # Only a snapshot lifts an unknown: a feed can go quiet without
                 # a new event, so a retried event can be older news than it.
                 self._hold_unknown(bridge_id, data.get("revision"))

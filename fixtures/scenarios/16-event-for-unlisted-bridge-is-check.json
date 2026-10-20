@@ -1,0 +1,38 @@
+{
+  "description": "The first snapshot doesn't list Fremont at all; a webhook for it only asks for a re-read and leaves it CHECK.",
+  "max_offline_seconds": 90,
+  "steps": [
+    {
+      "snapshot": "live-scope-changed.json"
+    },
+    {
+      "event": "events/fremont-feed-back.json"
+    }
+  ],
+  "expect": {
+    "bridges": {
+      "a1b2c3d4-0002-4000-8000-000000000001": {
+        "state": "CLEAR",
+        "revision": 1792159740000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000002": {
+        "state": "CLEAR",
+        "revision": 1792151222000,
+        "hold": false
+      },
+      "a1b2c3d4-0002-4000-8000-000000000022": {
+        "state": "UNKNOWN",
+        "revision": 1792160430000,
+        "hold": true
+      }
+    },
+    "reread": [
+      true
+    ],
+    "routes": {
+      "Brickell loop": "CLEAR",
+      "Fremont crossing": "CHECK"
+    }
+  }
+}

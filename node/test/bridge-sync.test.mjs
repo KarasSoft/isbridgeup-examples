@@ -41,7 +41,7 @@ test('replay runs every scenario', () => {
   for (const path of SCENARIOS) {
     const [code, out] = quietly(() => replay(path))
     assert.equal(code, 0)
-    assert.match(out, /== snapshot live[\w-]*\.json/)
+    assert.match(out, /== snapshot [\w-]*live[\w-]*\.json/)
   }
 })
 
