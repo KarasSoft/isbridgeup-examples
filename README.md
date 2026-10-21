@@ -25,8 +25,8 @@ cd isbridgeup-examples/python
 python3 bridge_sync.py --replay ../fixtures/scenarios/10-snapshot-after-recovery.json
 ```
 
-Node.js: `cd node && node bridge-sync.mjs --replay ../fixtures/scenarios/10-snapshot-after-recovery.json`.
-Both print the same thing. The first board of every scenario looks like this:
+Node.js, from the repository root: `cd node && node bridge-sync.mjs --replay ../fixtures/scenarios/10-snapshot-after-recovery.json`.
+Both print the same thing. Scenarios 01–10 start from this board:
 
 ```text
 BLOCKED  Brickell loop
@@ -72,10 +72,14 @@ Live API (the 7-day trial and Integrator do).
 2. Read the live state once:
 
    ```bash
-   cd python                                # or: cd node
+   cd python                                # from the repository root; or: cd node
    read -rs IBU_KEY && export IBU_KEY       # paste the key, press Enter; it stays out of your history
    python3 bridge_sync.py --once            # or: node bridge-sync.mjs --once
    ```
+
+   The key and the API must be the same environment: the default is production
+   (`https://api.isbridgeup.com`). A key from another environment answers `401`; point
+   `IBU_API_BASE` at the API that issued it.
 
 3. Put your own routes in a file shaped like [`routes.example.json`](routes.example.json), with
    bridge ids from `GET /v1/bridges`. Ids never change. Then `export IBU_ROUTES=path/to/routes.json`.
@@ -176,8 +180,8 @@ This is a reference, small enough to read in one sitting. Things to change for p
 ## Tests
 
 ```bash
-cd python && python3 -m unittest discover -s tests -t .
-cd node && npm test
+(cd python && python3 -m unittest discover -s tests -t .)   # from the repository root
+(cd node && npm test)
 ```
 
 The fixtures are checked against the IsBridgeUp API on every release: responses validate
